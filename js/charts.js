@@ -1,0 +1,476 @@
+let chartETA = null;
+let chartHoras27 = null;
+let chartHoras17 = null;
+let chartHR = null;
+let chartEvolution = null;
+let chartDI = null;
+let chartHI = null;
+let chartVulnerability = null;
+function destroyChart(chart) {
+
+    if (chart) {
+        chart.destroy();
+    }
+}
+
+function createCharts() {
+
+    createSummary();
+
+    createDIChart();
+
+    createVulnerabilityChart();
+
+    createHIChart();
+
+    createETAChart();
+
+    createHoras27Chart();
+
+    createHoras17Chart();
+
+    createHRChart();
+
+    createEvolutionChart();
+}
+
+function getValidStats() {
+
+    return processedStats.filter(
+        s => s.estado === "Evaluable"
+    );
+}
+
+function createETAChart() {
+
+    destroyChart(chartETA);
+
+    const datos = getValidStats();
+
+    chartETA = new Chart(
+
+        document.getElementById("chartETA"),
+
+        {
+            type: "bar",
+
+            data: {
+
+                labels:
+                    datos.map(
+                        s => s.aula
+                    ),
+
+                datasets: [{
+                    label: "ETA27",
+
+                    data:
+                        datos.map(
+                            s => s.eta27
+                        )
+                }]
+            }
+        }
+    );
+}
+
+function createHoras27Chart() {
+
+    destroyChart(chartHoras27);
+
+    const datos = getValidStats();
+
+    chartHoras27 = new Chart(
+
+        document.getElementById(
+            "chartHoras27"
+        ),
+
+        {
+            type: "bar",
+
+            data: {
+
+                labels:
+                    datos.map(
+                        s => s.aula
+                    ),
+
+                datasets: [{
+
+                    label:
+                        "Horas >27°C",
+
+                    data:
+                        datos.map(
+                            s => s.horasMas27
+                        )
+                }]
+            },
+            options: {
+                maintainAspectRatio: false
+            }
+        }
+    );
+}
+
+function createHoras17Chart() {
+
+    destroyChart(chartHoras17);
+
+    const datos = getValidStats();
+
+    chartHoras17 = new Chart(
+
+        document.getElementById(
+            "chartHoras17"
+        ),
+
+        {
+            type: "bar",
+
+            data: {
+
+                labels:
+                    datos.map(
+                        s => s.aula
+                    ),
+
+                datasets: [{
+
+                    label:
+                        "Horas <17°C",
+
+                    data:
+                        datos.map(
+                            s => s.horasMenos17
+                        )
+                }]
+            },
+            options: {
+                maintainAspectRatio: false
+            }
+        }
+    );
+}
+
+function createHRChart() {
+
+    destroyChart(chartHR);
+
+    const datos = getValidStats();
+
+    chartHR = new Chart(
+
+        document.getElementById("chartHR"),
+
+        {
+            type: "bar",
+
+            data: {
+
+                labels:
+                    datos.map(
+                        s => s.aula
+                    ),
+
+                datasets: [{
+
+                    label:
+                        "% HR fuera rango",
+
+                    data:
+                        datos.map(
+                            s =>
+                            s.porcentajeHRFueraRango
+                        )
+                }]
+            },
+
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        }
+    );
+}
+
+function createEvolutionChart() {
+
+    destroyChart(chartEvolution);
+
+    const datasets = [];
+
+    Object.entries(rawData).forEach(
+
+        ([aula, registros]) => {
+
+            datasets.push({
+
+                label: aula,
+
+                data:
+
+                registros.map(
+                    r => ({
+                        x: r.timestamp,
+                        y: r.temp
+                    })
+                ),
+
+                tension: 0.2
+            });
+        }
+    );
+
+    chartEvolution = new Chart(
+
+        document.getElementById(
+            "chartEvolution"
+        ),
+
+        {
+            type: "line",
+
+            data: {
+                datasets
+            },
+
+            options: {
+
+                responsive: true,
+
+                scales: {
+
+                    x: {
+
+                        type: "time"
+                    }
+                }
+            }
+        }
+    );
+}
+function createSummary() {
+
+    const datos = getValidStats();
+
+    if (!datos.length) return;
+
+    const cumplen =
+        datos.filter(
+            s => s.cumpleRD
+        ).length;
+
+    const incumplen =
+        datos.length - cumplen;
+
+    const aulaCritica =
+        [...datos]
+        .sort(
+            (a, b) =>
+            b.eta27 - a.eta27
+        )[0];
+
+    const tempMax =
+        Math.max(
+            ...datos.map(
+                s => s.tMax
+            )
+        );
+
+    document
+        .getElementById(
+            "dashboard-summary"
+        )
+        .innerHTML = `
+
+<div class="kpi-grid">
+
+    <div class="kpi-card">
+        <div class="kpi-value">
+            ${datos.length}
+        </div>
+        <div class="kpi-label">
+            Aulas analizadas
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-value">
+            ${cumplen}
+        </div>
+        <div class="kpi-label">
+            Cumplen RD486
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-value">
+            ${incumplen}
+        </div>
+        <div class="kpi-label">
+            No cumplen RD486
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-value">
+            ${aulaCritica.aula}
+        </div>
+        <div class="kpi-label">
+            Aula más vulnerable
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-value">
+            ${aulaCritica.eta27.toFixed(1)}
+        </div>
+        <div class="kpi-label">
+            ETA27 máximo
+        </div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-value">
+            ${tempMax.toFixed(1)}°C
+        </div>
+        <div class="kpi-label">
+            Temperatura máxima
+        </div>
+    </div>
+
+</div>
+`;
+}
+
+function createDIChart() {
+
+    destroyChart(chartDI);
+
+    const datos = getValidStats();
+
+    chartDI = new Chart(
+
+        document.getElementById(
+            "chartDI"
+        ),
+
+        {
+            type: "bar",
+
+            data: {
+
+                labels:
+                    datos.map(
+                        s => s.aula
+                    ),
+
+                datasets: [{
+                    label:
+                        "DI medio",
+
+                    data:
+                        datos.map(
+                            s => s.diMedia
+                        )
+                }]
+            }
+        }
+    );
+}
+
+function createHIChart() {
+
+    destroyChart(chartHI);
+
+    const datos = getValidStats();
+
+    chartHI = new Chart(
+
+        document.getElementById(
+            "chartHI"
+        ),
+
+        {
+            type: "bar",
+
+            data: {
+
+                labels:
+                    datos.map(
+                        s => s.aula
+                    ),
+
+                datasets: [{
+                    label:
+                        "HI medio",
+
+                    data:
+                        datos.map(
+                            s => s.hiMedia
+                        )
+                }]
+            }
+        }
+    );
+}
+
+function createVulnerabilityChart() {
+
+    destroyChart(
+        chartVulnerability
+    );
+
+    const datos = getValidStats();
+
+    const vulnerabilidad =
+        datos.map(s => {
+
+            const indice =
+                (s.eta27 * 2)
+                +
+                s.porcentajeSobre27;
+
+            return {
+                aula: s.aula,
+                indice
+            };
+        });
+
+    chartVulnerability =
+        new Chart(
+
+        document.getElementById(
+            "chartVulnerability"
+        ),
+
+        {
+            type: "bar",
+
+            data: {
+
+                labels:
+                    vulnerabilidad.map(
+                        v => v.aula
+                    ),
+
+                datasets: [{
+
+                    label:
+                        "Índice de vulnerabilidad",
+
+                    data:
+                        vulnerabilidad.map(
+                            v => v.indice
+                        )
+                }]
+            }
+        });
+}

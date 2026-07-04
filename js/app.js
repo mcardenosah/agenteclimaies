@@ -1,0 +1,144 @@
+// =====================================================
+function openTab(tabId) {
+document
+    .querySelectorAll(".tab-content")
+    .forEach(tab => {
+        tab.classList.remove(
+            "active"
+        );
+    });
+document
+    .getElementById(
+        `tab-${tabId}`
+    )
+    .classList.add(
+        "active"
+    );
+}
+// -----------------------------------------------------
+// Resumen
+// -----------------------------------------------------
+function updateSummary() {
+const evaluables =
+    processedStats.filter(
+        s =>
+        s.estado === "Evaluable"
+    );
+const cumplenRD =
+    evaluables.filter(
+        s =>
+        s.cumpleRD
+    ).length;
+const incumplenRD =
+    evaluables.length -
+    cumplenRD;
+document
+    .getElementById(
+        "summary-list"
+    )
+    .innerHTML = `
+<li>
+<strong>Aulas evaluadas:</strong>
+${evaluables.length}
+</li>
+<li>
+<strong>Cumplen RD486:</strong>
+${cumplenRD}
+</li>
+<li>
+<strong>No cumplen RD486:</strong>
+${incumplenRD}
+</li>
+`;
+}
+// -----------------------------------------------------
+// Tabla informe
+// -----------------------------------------------------
+
+function populateTable() {
+
+    const tbody =
+        document.getElementById(
+            "informe-tbody"
+        );
+
+    tbody.innerHTML = "";
+
+    processedStats.forEach(stat => {
+
+        if (
+            stat.estado !==
+            "Evaluable"
+        ) {
+            return;
+        }
+
+        const cumpleClase =
+            stat.cumpleRD
+            ? "estado-cumple"
+            : "estado-incumple";
+
+        const cumpleTexto =
+            stat.cumpleRD
+            ? "✔ Cumple"
+            : "✘ No cumple";
+
+        const severidadClase =
+            `estado-${stat.severidad.toLowerCase()}`;
+
+        tbody.innerHTML += `
+
+<tr>
+
+<td>${stat.aula}</td>
+
+<td>${stat.tMedia.toFixed(1)}</td>
+
+<td>${stat.tMax.toFixed(1)}</td>
+
+<td>${stat.horasMenos17.toFixed(2)}</td>
+
+<td>${stat.horasMas27.toFixed(2)}</td>
+
+<td>${stat.eta27.toFixed(2)}</td>
+
+<td>${stat.hrMedia.toFixed(1)}</td>
+
+<td>${stat.hrMin.toFixed(1)}</td>
+
+<td>${stat.hrMax.toFixed(1)}</td>
+
+<td>${stat.porcentajeHRFueraRango.toFixed(1)}%</td>
+
+<td>${stat.diMedia.toFixed(1)}</td>
+
+<td>${stat.diMax.toFixed(1)}</td>
+
+<td>${stat.horasDI24.toFixed(1)}</td>
+
+<td>${stat.horasDI27.toFixed(1)}</td>
+
+<td>${stat.porcentajeDI24.toFixed(1)}%</td>
+
+<td>${stat.porcentajeDI27.toFixed(1)}%</td>
+
+<td class="${stat.hiResult.className} font-bold text-center">${stat.hiMedia.toFixed(1)}</td>
+
+<td class="${stat.hiResult.className} font-bold text-center">${stat.hiMax.toFixed(1)}</td>
+
+<td>${stat.categoriaConfort}</td>
+
+<td class="${severidadClase}">
+    ${stat.severidad}
+</td>
+
+<td class="${cumpleClase}">
+    ${cumpleTexto}
+</td>
+
+</tr>
+
+`;
+    });
+
+}
