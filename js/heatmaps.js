@@ -53,9 +53,7 @@ function createHeatmap() {
         rawData[aula].forEach(r => {
 
             fechas.add(
-                r.timestamp
-                    .toISOString()
-                    .split("T")[0]
+                localDateKey(r.timestamp)
             );
 
         });
@@ -146,6 +144,83 @@ function createHeatmap() {
         selector
             ? selector.value
             : fechasOrdenadas[0];
+
+    // =====================================
+    // Vista: un día (todas las aulas) o
+    // un aula (todos los días)
+    // =====================================
+
+    const viewSelector =
+        document.getElementById("mapViewSelector");
+
+    const aulaSelector =
+        document.getElementById("mapAulaSelector");
+
+    const vista =
+        viewSelector
+            ? viewSelector.value
+            : "day";
+
+    if (viewSelector) {
+        viewSelector.onchange =
+            function() {
+                createHeatmap();
+            };
+    }
+
+    if (aulaSelector) {
+
+        const aulaAnterior = aulaSelector.value;
+
+        aulaSelector.innerHTML = "";
+
+        aulas.forEach(aula => {
+            const opcion = document.createElement("option");
+            opcion.value = aula;
+            opcion.textContent = aula;
+            aulaSelector.appendChild(opcion);
+        });
+
+        aulaSelector.value =
+            aulas.includes(aulaAnterior)
+                ? aulaAnterior
+                : aulas[0];
+
+        aulaSelector.onchange =
+            function() {
+                createHeatmap();
+            };
+    }
+
+    const grupoDia =
+        document.getElementById("mapDayGroup");
+
+    const grupoAula =
+        document.getElementById("mapAulaGroup");
+
+    if (grupoDia && grupoDia.classList) {
+        grupoDia.classList.toggle("is-hidden", vista !== "day");
+    }
+
+    if (grupoAula && grupoAula.classList) {
+        grupoAula.classList.toggle("is-hidden", vista !== "aula");
+    }
+
+    if (vista === "aula" && aulaSelector) {
+
+        container.innerHTML =
+            buildAulaHeatmap(
+                aulaSelector.value,
+                tipoMapa
+            );
+
+        return;
+    }
+
+    const diaLectivo =
+        scheduleConfig.days.includes(
+            new Date(fechaSeleccionada + "T12:00:00").getDay()
+        );
 // =====================================
 // Resumen ejecutivo
 // =====================================
@@ -174,9 +249,7 @@ aulas.forEach(aula => {
     rawData[aula].forEach(r => {
 
         const fechaRegistro =
-            r.timestamp
-                .toISOString()
-                .split("T")[0];
+            localDateKey(r.timestamp);
 
         if (
             fechaRegistro !==
@@ -224,7 +297,7 @@ aulas.forEach(aula => {
 
     } else if (tipoMapa === "heatindex") {
 
-        if (maxAula >= 33) {
+        if (maxAula >= 32) {
             aulasHI33++;
         }
 
@@ -285,6 +358,8 @@ const mediaGlobal =
         ${fechasOrdenadas.length}
     </p>
     `;
+const iResumen = html.length;
+
 html += `
 <div class="mb-6 p-4 bg-slate-50 border rounded">
 
@@ -342,17 +417,17 @@ if (tipoMapa === "temperature") {
     </p>
 
     <p>
-    Aulas con HI ≥33 (Precaución):
+    Aulas con HI ≥32 (Precaución extrema o superior):
     <strong>${aulasHI33}</strong>
     </p>
 
     <p>
-    Aulas con HI ≥41 (Extrema Precaución):
+    Aulas con HI ≥41 (Peligro o superior):
     <strong>${aulasHI41}</strong>
     </p>
 
     <p>
-    Aulas con HI ≥52 (Peligro):
+    Aulas con HI ≥52 (Peligro extremo o superior):
     <strong>${aulasHI52}</strong>
     </p>
     `;
@@ -392,6 +467,9 @@ if (tipoMapa === "temperature") {
 }
 
 html += `</div>`;
+
+    const iLeyenda = html.length;
+
     // =====================================
     // Leyenda
     // =====================================
@@ -446,12 +524,12 @@ html += `</div>`;
 
             <div class="flex items-center gap-2">
                 <span class="hi-extreme-caution border px-3 py-1"></span>
-                <span>33–40</span>
+                <span>32–41</span>
             </div>
 
             <div class="flex items-center gap-2">
                 <span class="hi-danger border px-3 py-1"></span>
-                <span>41–51</span>
+                <span>41–52</span>
             </div>
 
             <div class="flex items-center gap-2">
@@ -493,13 +571,13 @@ html += `</div>`;
         </tr>
 
         <tr>
-        <td>33 – 40</td>
+        <td>32 – 41</td>
         <td>Precaución extrema</td>
         <td>Posibles calambres y agotamiento por calor. La evaporación del sudor comienza a ser insuficiente.</td>
         </tr>
 
         <tr>
-        <td>41 – 51</td>
+        <td>41 – 52</td>
         <td>Peligro</td>
         <td>Calambres y agotamiento probables; posible golpe de calor.</td>
         </tr>
@@ -624,12 +702,16 @@ html += `</div>`;
 
     }
 
+    const iTabla = html.length;
+
     // =====================================
     // Tabla
     // =====================================
 
+    html += heatmapScheduleHint();
+
     html +=
-        '<table class="min-w-full border text-xs">';
+        '<div class="heatmap-scroll"><table class="min-w-full border text-xs heatmap-table">';
 
     html += "<tr>";
 
@@ -643,7 +725,7 @@ html += `</div>`;
     ) {
 
         html +=
-            `<th class='border p-1'>${hora}</th>`;
+            `<th class='border p-1 ${diaLectivo && hourIsLectivo(hora) ? "hm-lectivo" : ""}'>${hora}</th>`;
 
     }
 
@@ -664,9 +746,7 @@ html += `</div>`;
         rawData[aula].forEach(r => {
 
             const fechaRegistro =
-                r.timestamp
-                    .toISOString()
-                    .split("T")[0];
+                localDateKey(r.timestamp);
 
             if (
                 fechaRegistro !==
@@ -848,9 +928,246 @@ html += `</div>`;
 
     });
 
-    html += "</table>";
+    html += "</table></div>";
+
+    // Orden final: cabecera, leyenda, mapa, resumen del día
+    // y, plegada, la tabla de interpretación.
+    const cabecera = html.slice(0, iResumen);
+    const resumen = html.slice(iResumen, iLeyenda);
+    const leyenda = html.slice(iLeyenda, iTabla);
+    const tabla = html.slice(iTabla);
+
+    const iInterpretacion =
+        leyenda.indexOf('<div class="mt-4 mb-6 overflow-x-auto">');
+
+    const colores =
+        iInterpretacion >= 0
+        ? leyenda.slice(0, iInterpretacion)
+        : leyenda;
+
+    const interpretacion =
+        iInterpretacion >= 0
+        ? '<details class="fold mt-4"><summary>Cómo interpretar los valores</summary>' +
+          leyenda.slice(iInterpretacion) +
+          "</details>"
+        : "";
 
     container.innerHTML =
-        html;
+        cabecera +
+        colores +
+        tabla +
+        '<div class="mt-6">' + resumen + "</div>" +
+        interpretacion;
 
+}
+
+// =====================================================
+// Utilidades comunes de los mapas
+// =====================================================
+
+function hourIsLectivo(hora) {
+
+    return (
+        scheduleConfig.enabled &&
+        hora * 60 >= timeToMinutes(scheduleConfig.start) &&
+        hora * 60 < timeToMinutes(scheduleConfig.end)
+    );
+}
+
+function heatmapScheduleHint() {
+
+    return scheduleConfig.enabled
+        ? '<p class="text-xs text-slate-600 mb-2"><span class="hm-lectivo-key"></span> Horas con la cabecera resaltada: horario lectivo.</p>'
+        : "";
+}
+
+function heatmapValue(tipoMapa, registro) {
+
+    if (tipoMapa === "temperature") {
+        return registro.temp;
+    }
+
+    if (tipoMapa === "heatindex") {
+        return calculateHeatIndex(registro.temp, registro.hum);
+    }
+
+    return calculateThomIndex(registro.temp, registro.hum);
+}
+
+function heatmapCellClass(tipoMapa, valor) {
+
+    if (tipoMapa === "temperature") {
+        if (valor < 22) return "temp-muy-frio";
+        if (valor < 25) return "temp-confortable";
+        if (valor < 27) return "temp-calido";
+        if (valor < 30) return "temp-calor";
+        return "temp-extremo";
+    }
+
+    if (tipoMapa === "heatindex") {
+        const hi = classifyHeatIndex(valor);
+        return hi ? hi.className : "";
+    }
+
+    const di = classifyThomInfo(valor);
+    return di ? di.className : "";
+}
+
+function heatmapLegendHTML(tipoMapa) {
+
+    let elementos;
+
+    if (tipoMapa === "temperature") {
+
+        elementos = [
+            ["temp-muy-frio", "< 22 °C"],
+            ["temp-confortable", "22–25 °C"],
+            ["temp-calido", "25–27 °C"],
+            ["temp-calor", "27–30 °C"],
+            ["temp-extremo", "> 30 °C"]
+        ];
+
+    } else {
+
+        const niveles =
+            tipoMapa === "heatindex" ? HI_LEVELS : DI_LEVELS;
+
+        let anterior = null;
+
+        elementos = niveles.map(nivel => {
+
+            const rango =
+                anterior === null
+                    ? `< ${nivel.max}`
+                    : nivel.max === Infinity
+                    ? `> ${anterior}`
+                    : `${anterior}–${nivel.max}`;
+
+            anterior = nivel.max;
+
+            return [
+                nivel.className,
+                `${rango} · ${nivel.category}`
+            ];
+        });
+    }
+
+    return (
+        '<div class="flex flex-wrap gap-4 mb-4 text-sm">' +
+        elementos.map(e =>
+            `<div class="flex items-center gap-2"><span class="${e[0]} border px-3 py-1"></span><span>${e[1]}</span></div>`
+        ).join("") +
+        "</div>"
+    );
+}
+
+// =====================================================
+// Mapa de un aula: una fila por día, una columna por hora
+// =====================================================
+
+function buildAulaHeatmap(aula, tipoMapa) {
+
+    const registros = rawData[aula] || [];
+
+    const porDia = {};
+
+    registros.forEach(r => {
+
+        const valor = heatmapValue(tipoMapa, r);
+
+        if (!Number.isFinite(valor)) {
+            return;
+        }
+
+        const dia = localDateKey(r.timestamp);
+        const hora = r.timestamp.getHours();
+
+        if (!porDia[dia]) {
+            porDia[dia] = {};
+        }
+
+        if (!porDia[dia][hora]) {
+            porDia[dia][hora] = [];
+        }
+
+        porDia[dia][hora].push(valor);
+    });
+
+    const dias = Object.keys(porDia).sort();
+
+    const nombres = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+
+    const titulo =
+        tipoMapa === "temperature"
+        ? "Temperatura"
+        : tipoMapa === "heatindex"
+        ? "Heat Index"
+        : "Índice de Disconfort (DI)";
+
+    let html = `
+    <h3 class="font-bold text-lg mb-2">
+        ${titulo} hora a hora · aula ${aula}
+    </h3>
+
+    <p class="mb-4 text-sm text-slate-600">
+        Cada fila es un día y cada columna una hora. Cada celda muestra la media de esa hora. Días registrados: ${dias.length}.
+    </p>
+    `;
+
+    html += heatmapLegendHTML(tipoMapa);
+
+    html += heatmapScheduleHint();
+
+    html +=
+        '<div class="heatmap-scroll"><table class="min-w-full border text-xs heatmap-table">';
+
+    html += "<tr><th class='border p-1'>Día</th>";
+
+    for (let hora = 0; hora < 24; hora++) {
+        html +=
+            `<th class='border p-1 ${hourIsLectivo(hora) ? "hm-lectivo" : ""}'>${hora}</th>`;
+    }
+
+    html += "</tr>";
+
+    dias.forEach(dia => {
+
+        const partes = dia.split("-").map(Number);
+
+        const fecha =
+            new Date(partes[0], partes[1] - 1, partes[2]);
+
+        const lectivo =
+            !scheduleConfig.enabled ||
+            scheduleConfig.days.includes(fecha.getDay());
+
+        const etiqueta =
+            `${nombres[fecha.getDay()]} ${String(partes[2]).padStart(2, "0")}/${String(partes[1]).padStart(2, "0")}`;
+
+        html +=
+            `<tr><td class='border p-1 font-bold whitespace-nowrap ${lectivo ? "" : "hm-no-lectivo"}'>${etiqueta}</td>`;
+
+        for (let hora = 0; hora < 24; hora++) {
+
+            const valores = porDia[dia][hora];
+
+            if (!valores) {
+                html += "<td class='border'></td>";
+                continue;
+            }
+
+            const media =
+                valores.reduce((a, b) => a + b, 0) /
+                valores.length;
+
+            html +=
+                `<td class="border p-1 ${heatmapCellClass(tipoMapa, media)}">${media.toFixed(1)}</td>`;
+        }
+
+        html += "</tr>";
+    });
+
+    html += "</table></div>";
+
+    return html;
 }

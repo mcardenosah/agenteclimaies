@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Agente Clima IES v1.0</title>
+<title>Agente Clima IES</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 
@@ -21,153 +21,369 @@
 
 </head>
 
-<body class="bg-slate-100 text-slate-800">
+<body class="app-body text-slate-800">
 
-<nav class="bg-slate-900 text-white shadow-lg">
+<header class="app-header">
 
-<div class="max-w-7xl mx-auto px-4">
+<div class="app-header-inner">
 
-<div class="flex justify-between items-center h-16">
+<a href="#" class="brand" onclick="openTab('importar'); return false;" aria-label="Agente Clima IES, ir al inicio">
+<svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
+<circle cx="16" cy="16" r="15" fill="#ecfdf5"/>
+<path d="M14 7a2 2 0 0 1 4 0v10.3a4.5 4.5 0 1 1-4 0z" fill="#fff" stroke="#0f766e" stroke-width="1.6"/>
+<circle cx="16" cy="21.2" r="2.6" fill="#f97316"/>
+<rect x="15.2" y="11" width="1.6" height="9" rx=".8" fill="#f97316"/>
+<path d="M22 9c3 0 5 2 5 5-3 0-5-2-5-5z" fill="#65a30d"/>
+</svg>
+<span>Agente Clima IES</span>
+</a>
 
-<h1 class="font-bold text-xl">
-Agente Clima IES v1.0
-</h1>
+<nav aria-label="Secciones de la aplicación" class="tabs-nav">
 
-<div class="space-x-2">
+<div class="tabs" role="tablist">
 
 <button
 id="btn-importar"
 class="tab-button active-tab"
+role="tab"
+aria-selected="true"
+aria-controls="tab-importar"
 onclick="openTab('importar')">
-
-Datos
-
+Inicio
 </button>
 
 <button
 id="btn-informe"
 class="tab-button"
+role="tab"
+aria-selected="false"
+aria-controls="tab-informe"
 disabled
 onclick="openTab('informe')">
-
 Informe
-
 </button>
 
 <button
 id="btn-dashboard"
 class="tab-button"
+role="tab"
+aria-selected="false"
+aria-controls="tab-dashboard"
 disabled
 onclick="openTab('dashboard')">
-
 Dashboard
-
 </button>
+
 <button
 id="btn-mapas"
 class="tab-button"
+role="tab"
+aria-selected="false"
+aria-controls="tab-mapas"
 disabled
 onclick="openTab('mapas')">
-
 Mapas térmicos
-
 </button>
 
 <button
 id="btn-aula"
 class="tab-button"
+role="tab"
+aria-selected="false"
+aria-controls="tab-aula"
 disabled
 onclick="openTab('aula')">
-
-Análisis por Aula
-
+Análisis por aula
 </button>
-</div>
-
-</div>
 
 </div>
 
 </nav>
 
+<button
+id="btn-guardar"
+class="btn-save"
+disabled
+onclick="saveProject()"
+title="Guarda los datos cargados en un archivo .json para no tener que volver a importar los CSV">
+<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+<span>Guardar<span class="btn-save-extra"> proyecto</span></span>
+</button>
+
+</div>
+
+</header>
+
+<!-- HORARIO EVALUADO (común a todas las pestañas) -->
+<div id="schedule-bar" class="schedule-bar is-hidden">
+
+<div class="schedule-bar-inner">
+
+<p class="schedule-summary">
+<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+<span>Horario evaluado:</span>
+<strong class="schedule-summary-text"></strong>
+<span id="scheduleScopeNote" class="schedule-scope"></span>
+</p>
+
+<button
+id="scheduleToggle"
+class="schedule-change"
+aria-expanded="false"
+aria-controls="schedule-editor"
+onclick="toggleScheduleEditor()">
+Cambiar
+</button>
+
+</div>
+
+<div id="schedule-editor" class="schedule-editor is-hidden">
+
+<fieldset>
+
+<legend class="sr-only">Horario evaluado</legend>
+
+<div class="flex flex-wrap gap-x-6 gap-y-3 items-center">
+
+<label class="flex items-center gap-2 font-bold">
+<input type="checkbox" id="scheduleEnabled" checked>
+Evaluar solo el horario lectivo
+</label>
+
+<div class="flex flex-wrap gap-3 items-center" role="group" aria-label="Días lectivos">
+<label class="flex items-center gap-1"><input type="checkbox" class="schedule-day" value="1" checked> Lunes</label>
+<label class="flex items-center gap-1"><input type="checkbox" class="schedule-day" value="2" checked> Martes</label>
+<label class="flex items-center gap-1"><input type="checkbox" class="schedule-day" value="3" checked> Miércoles</label>
+<label class="flex items-center gap-1"><input type="checkbox" class="schedule-day" value="4" checked> Jueves</label>
+<label class="flex items-center gap-1"><input type="checkbox" class="schedule-day" value="5" checked> Viernes</label>
+<label class="flex items-center gap-1"><input type="checkbox" class="schedule-day" value="6"> Sábado</label>
+<label class="flex items-center gap-1"><input type="checkbox" class="schedule-day" value="0"> Domingo</label>
+</div>
+
+<label class="flex items-center gap-2">
+Desde
+<input type="time" id="scheduleStart" value="08:00" class="border p-1 rounded bg-white">
+</label>
+
+<label class="flex items-center gap-2">
+Hasta
+<input type="time" id="scheduleEnd" value="15:00" class="border p-1 rounded bg-white">
+</label>
+
+<div class="flex gap-2">
+<button onclick="applySchedule()" class="btn-primary btn-small">Aplicar</button>
+<button onclick="toggleScheduleEditor(false)" class="btn-secondary btn-small">Cancelar</button>
+</div>
+
+</div>
+
+<p id="scheduleError" class="text-sm text-red-700 mt-2" role="alert"></p>
+
+<p class="text-xs text-slate-600 mt-2">
+Se aplica a las horas de exposición, el ETA27, la severidad y el cumplimiento del RD 486/1997 (Informe y Dashboard). Las medias, mínimos y máximos, los mapas térmicos y el análisis por aula muestran siempre todo el periodo. Los festivos y las vacaciones no se excluyen automáticamente.
+</p>
+
+</fieldset>
+
+</div>
+
+</div>
+
 <main class="max-w-7xl mx-auto p-4 md:p-8">
 
-<!-- IMPORTAR -->
+<!-- INICIO -->
 <section id="tab-importar" class="tab-content active">
 
-    <!-- Hero / Intro -->
-    <div class="mb-10 text-center">
-        <h2 class="text-3xl font-extrabold text-slate-800 mb-3 tracking-tight">Bienvenido al Agente Clima IES</h2>
-        <p class="text-slate-600 max-w-2xl mx-auto text-lg">
-            Plataforma local y segura para el análisis termohigrométrico y evaluación del confort térmico y estrés fisiológico en centros educativos.
-        </p>
-        <div class="mt-6 flex justify-center gap-6">
-            <a href="README.md" target="_blank" class="flex items-center text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline">
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                Guía Rápida (README)
-            </a>
-            <a href="metodologia.md" target="_blank" class="flex items-center text-sm font-semibold text-emerald-600 hover:text-emerald-800 hover:underline">
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                Documentación Metodológica
-            </a>
-        </div>
-    </div>
+<div class="hero">
 
-    <!-- Actions Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        <!-- Column 1: New Project -->
-        <div class="card flex flex-col items-center justify-center text-center shadow-md hover:shadow-lg transition-shadow border-t-4 border-blue-500">
-            <div class="bg-blue-100 p-4 rounded-full mb-4">
-                <svg class="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-            </div>
-            <h3 class="text-xl font-bold mb-2">Nuevo Análisis (CSV)</h3>
-            <p class="text-sm text-slate-500 mb-6 px-4">Sube los archivos exportados por los dataloggers. El sistema los procesará e interpretará al instante.</p>
-            
-            <div id="drop-zone" class="w-full border-2 border-dashed border-slate-300 rounded-xl p-10 hover:bg-slate-50 hover:border-blue-500 hover:text-blue-600 transition-colors cursor-pointer text-slate-400 flex flex-col items-center">
-                <span class="font-bold mb-1">Haz clic para subir archivos CSV</span>
-                <span class="text-sm">o arrástralos y suéltalos aquí</span>
-                <input type="file" id="file-input" multiple accept=".csv" class="hidden">
-            </div>
-        </div>
+<div class="hero-text">
+<p class="hero-kicker">Adaptación al cambio climático</p>
+<h2 class="hero-title">¿Qué temperatura hace de verdad en nuestras aulas?</h2>
+<p class="hero-lead">
+Carga los registros de los sensores de temperatura y humedad y descubre, aula por aula, cuándo se está a gusto y cuándo el calor o el frío dificultan aprender y enseñar.
+</p>
+<p class="privacy-badge">
+<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+Tus datos no salen de este ordenador: todo se calcula en tu navegador.
+</p>
+</div>
 
-        <!-- Column 2: Load/Save Project -->
-        <div class="card flex flex-col shadow-md hover:shadow-lg transition-shadow border-t-4 border-emerald-500">
-            <div class="flex-1 flex flex-col items-center justify-center text-center border-b border-slate-100 pb-6 mb-6">
-                <div class="bg-emerald-100 p-4 rounded-full mb-4">
-                    <svg class="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                </div>
-                <h3 class="text-xl font-bold mb-2">Cargar Sesión (JSON)</h3>
-                <p class="text-sm text-slate-500 mb-4 px-4">¿Ya habías procesado y depurado tus datos? Carga tu sesión para retomarlo todo al instante.</p>
-                <button onclick="loadProject()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-lg transition-colors shadow">Abrir proyecto JSON</button>
-                <input type="file" id="project-input" accept=".json" class="hidden">
-            </div>
-            
-            <div class="text-center">
-                <h4 class="text-sm font-bold mb-2 text-slate-700">Guardar progreso de la sesión actual</h4>
-                <p class="text-xs text-slate-500 mb-3 px-4">Exporta el trabajo procesado actual a un archivo ligero para evitar procesar los CSV masivos en el futuro.</p>
-                <button onclick="saveProject()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-lg transition-colors border border-slate-200">Guardar proyecto actual</button>
-            </div>
-        </div>
+<div class="hero-art" aria-hidden="true">
+<svg viewBox="0 0 360 240" role="presentation">
+<!-- sol -->
+<circle cx="300" cy="52" r="26" fill="#fbbf24"/>
+<g stroke="#fbbf24" stroke-width="5" stroke-linecap="round">
+<path d="M300 10v-8M300 102v-8M258 52h-8M350 52h-8M270 22l-6-6M336 88l-6-6M270 82l-6 6M336 16l-6 6"/>
+</g>
+<!-- suelo -->
+<path d="M0 206h360v34H0z" fill="#d9f99d"/>
+<!-- edificio -->
+<rect x="70" y="70" width="190" height="138" rx="6" fill="#fffdf7" stroke="#0f766e" stroke-width="3"/>
+<path d="M62 72h206l-10-18H72z" fill="#0f766e"/>
+<!-- ventanas coloreadas como un mapa térmico -->
+<g stroke="#0f766e" stroke-width="2">
+<rect x="88" y="88" width="42" height="28" rx="3" fill="#fb923c"/>
+<rect x="144" y="88" width="42" height="28" rx="3" fill="#fde047"/>
+<rect x="200" y="88" width="42" height="28" rx="3" fill="#fb923c"/>
+<rect x="88" y="128" width="42" height="28" rx="3" fill="#fde047"/>
+<rect x="144" y="128" width="42" height="28" rx="3" fill="#86efac"/>
+<rect x="200" y="128" width="42" height="28" rx="3" fill="#fde047"/>
+<rect x="88" y="168" width="42" height="28" rx="3" fill="#86efac"/>
+<rect x="200" y="168" width="42" height="28" rx="3" fill="#86efac"/>
+</g>
+<rect x="150" y="166" width="30" height="42" rx="3" fill="#0f766e"/>
+<!-- enredadera en la fachada -->
+<path d="M72 206c2-40-6-70 4-110" fill="none" stroke="#4d7c0f" stroke-width="3" stroke-linecap="round"/>
+<g fill="#65a30d">
+<ellipse cx="68" cy="180" rx="8" ry="5" transform="rotate(-30 68 180)"/>
+<ellipse cx="80" cy="160" rx="8" ry="5" transform="rotate(30 80 160)"/>
+<ellipse cx="66" cy="140" rx="8" ry="5" transform="rotate(-30 66 140)"/>
+<ellipse cx="80" cy="120" rx="8" ry="5" transform="rotate(30 80 120)"/>
+<ellipse cx="72" cy="102" rx="8" ry="5" transform="rotate(-20 72 102)"/>
+</g>
+<!-- árbol -->
+<rect x="298" y="150" width="10" height="58" rx="3" fill="#92400e"/>
+<circle cx="303" cy="132" r="34" fill="#65a30d"/>
+<circle cx="282" cy="150" r="20" fill="#84cc16"/>
+<circle cx="326" cy="148" r="22" fill="#4d7c0f"/>
+<!-- termómetro -->
+<g transform="translate(22 96)">
+<path d="M10 0a8 8 0 0 1 16 0v62a16 16 0 1 1-16 0z" fill="#fff" stroke="#0f766e" stroke-width="3"/>
+<circle cx="18" cy="76" r="9" fill="#f97316"/>
+<rect x="15" y="22" width="6" height="52" rx="3" fill="#f97316"/>
+<g stroke="#0f766e" stroke-width="2" stroke-linecap="round"><path d="M30 12h6M30 26h6M30 40h6M30 54h6"/></g>
+</g>
+</svg>
+</div>
 
-    </div>
+</div>
 
-    <!-- Status & Results -->
-    <div id="processing-status" class="hidden mt-8 text-center bg-blue-50 text-blue-800 font-bold text-lg p-6 rounded-lg animate-pulse border border-blue-200">
-        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-600 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        Procesando datos y calculando índices termohigrométricos...
-    </div>
-    
-    <div id="results-summary" class="hidden mt-8 card border-l-4 border-l-emerald-500 shadow-md">
-        <h3 class="font-bold text-xl mb-4 text-emerald-800 flex items-center">
-            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            Procesamiento Completado
-        </h3>
-        <ul id="summary-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-slate-700 bg-slate-50 p-4 rounded-lg"></ul>
-    </div>
+<!-- Cómo funciona -->
+<ol class="steps" aria-label="Cómo funciona">
+<li>
+<span class="step-number" aria-hidden="true">1</span>
+<div>
+<strong>Carga los datos</strong>
+<span>Los archivos CSV que exportan los sensores de cada aula.</span>
+</div>
+</li>
+<li>
+<span class="step-number" aria-hidden="true">2</span>
+<div>
+<strong>Revisa los resultados</strong>
+<span>Informe, gráficos, mapas térmicos y análisis de cada aula.</span>
+</div>
+</li>
+<li>
+<span class="step-number" aria-hidden="true">3</span>
+<div>
+<strong>Compártelos</strong>
+<span>Descarga el informe o guarda el proyecto para seguir otro día.</span>
+</div>
+</li>
+</ol>
+
+<!-- Acciones -->
+<div class="start-grid">
+
+<div class="card start-main">
+<h3 class="start-title">Empieza aquí</h3>
+<div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-describedby="drop-help">
+<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16a4 4 0 0 1-.9-7.9A5 5 0 0 1 15.9 6H16a5 5 0 0 1 1 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+<strong>Arrastra aquí los archivos CSV</strong>
+<span>o pulsa para elegirlos</span>
+<input type="file" id="file-input" multiple accept=".csv" class="hidden">
+</div>
+<p id="drop-help" class="hint">
+Uno o varios archivos por aula, con las columnas fecha, temperatura y humedad en ese orden. El nombre del aula se toma del nombre del archivo hasta el primer guion bajo: <code>A12_junio.csv</code> → aula A12.
+</p>
+</div>
+
+<div class="start-side">
+
+<div class="card">
+<h3 class="start-title">¿Ya tienes un proyecto guardado?</h3>
+<p class="hint">Ábrelo y retoma el análisis donde lo dejaste, sin volver a cargar los CSV.</p>
+<button onclick="loadProject()" class="btn-secondary">Abrir proyecto (.json)</button>
+<input type="file" id="project-input" accept=".json" class="hidden">
+</div>
+
+<div class="card">
+<h3 class="start-title">¿Solo quieres ver cómo funciona?</h3>
+<p class="hint">Carga dos semanas de datos inventados de seis aulas para explorar la aplicación.</p>
+<button onclick="loadSampleData()" class="btn-secondary">Probar con datos de ejemplo</button>
+</div>
+
+</div>
+
+</div>
+
+<!-- Estado y resultados -->
+<div id="processing-status" class="hidden mt-8 text-center bg-teal-50 text-teal-800 font-bold text-lg p-6 rounded-lg animate-pulse border border-teal-200" role="status">
+<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-teal-600 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+</svg>
+Procesando datos y calculando índices...
+</div>
+
+<div id="results-summary" class="hidden mt-8 card results-card" role="status">
+<h3 class="results-title">
+<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+Datos listos
+</h3>
+<ul id="summary-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-slate-700 bg-slate-50 p-4 rounded-lg"></ul>
+<p class="schedule-inline">
+Horario evaluado:
+<strong class="schedule-summary-text"></strong>
+<button class="link-button" onclick="toggleScheduleEditor(true)">Cambiar</button>
+</p>
+<p class="next-label">¿Qué quieres ver ahora?</p>
+<div class="next-steps">
+<button class="btn-primary" onclick="openTab('dashboard')">Resumen visual (Dashboard)</button>
+<button class="btn-secondary" onclick="openTab('informe')">Informe por aulas</button>
+<button class="btn-secondary" onclick="openTab('mapas')">Mapas térmicos</button>
+<button class="btn-secondary" onclick="openTab('aula')">Un aula en detalle</button>
+</div>
+</div>
+
+<!-- Qué mide -->
+<h3 class="block-title">¿Qué mide cada indicador?</h3>
+
+<div class="index-grid">
+
+<div class="index-card">
+<span class="index-tag tag-temp">RD 486/1997</span>
+<h4>Temperatura y humedad</h4>
+<p>La norma de lugares de trabajo fija entre 17 y 27 °C y entre el 30 y el 70 % de humedad para tareas sedentarias como las de un aula.</p>
+</div>
+
+<div class="index-card">
+<span class="index-tag tag-eta">ETA27</span>
+<h4>Calor acumulado</h4>
+<p>Suma cuántos grados se supera el límite de 27 °C y durante cuánto tiempo. Distingue un pico breve de una tarde entera de calor.</p>
+</div>
+
+<div class="index-card">
+<span class="index-tag tag-di">DI</span>
+<h4>Índice de disconfort</h4>
+<p>Combina temperatura y humedad para estimar lo incómodo que resulta el ambiente. A partir de 24, más de la mitad de las personas lo nota.</p>
+</div>
+
+<div class="index-card">
+<span class="index-tag tag-hi">HI</span>
+<h4>Índice de calor</h4>
+<p>Estima la temperatura que «siente» el cuerpo: con humedad alta el sudor se evapora peor y cuesta más mantener la temperatura corporal.</p>
+</div>
+
+</div>
+
+<p class="docs-links">
+Para saber más:
+<a href="README.md" target="_blank" rel="noopener">guía rápida</a>
+·
+<a href="metodologia.md" target="_blank" rel="noopener">metodología y fórmulas</a>
+</p>
 
 </section>
 
@@ -197,45 +413,54 @@ Exportar PDF
 
 </div>
 
-<div class="overflow-x-auto">
+<p class="schedule-note text-sm text-slate-600 mb-4"></p>
 
-<table
-class="min-w-full border">
+<div class="report-tools">
+<label class="flex items-center gap-2 text-sm font-bold">
+<input type="checkbox" id="reportShowAll" onchange="toggleReportColumns(this.checked)">
+Mostrar todas las columnas
+</label>
+<span class="text-sm text-slate-600">Pulsa el nombre de un aula para ver su análisis detallado.</span>
+</div>
+
+<div class="report-scroll">
+
+<table id="informe-table" class="report-table">
+
+<caption class="sr-only">Indicadores termohigrométricos por aula</caption>
 
 <thead>
 
 <tr>
+<th rowspan="2" scope="col">Aula</th>
+<th colspan="2" scope="colgroup" class="grp-val">Valoración</th>
+<th colspan="5" scope="colgroup" class="grp-temp">Temperatura</th>
+<th colspan="2" data-min="2" data-max="4" scope="colgroup" class="grp-hum">Humedad relativa</th>
+<th colspan="3" data-min="3" data-max="7" scope="colgroup" class="grp-di">Índice de disconfort (DI)</th>
+<th colspan="2" scope="colgroup" class="grp-hi">Heat Index</th>
+</tr>
 
-<th>Aula</th>
-
-<th>T media</th>
-<th>T máx</th>
-
-<th>Horas &lt;17</th>
-<th>Horas &gt;27</th>
-
-<th>ETA27</th>
-
-<th>HR media</th>
-<th>HR mín</th>
-<th>HR máx</th>
-
-<th>% HR fuera</th>
-
-<th>DI medio</th>
-
-<th>DI máx</th>
-<th>Horas DI>24</th>
-<th>Horas DI>27</th>
-<th>% DI>24</th>
-<th>% DI>27</th>
-<th>HI medio</th>
-<th>HI máx</th>
-<th>Confort</th>
-
-<th>Severidad</th>
-
-<th>RD486</th>
+<tr>
+<th scope="col" class="grp-val">Severidad</th>
+<th scope="col" class="grp-val">RD 486</th>
+<th scope="col" class="grp-temp">Media (°C)</th>
+<th scope="col" class="grp-temp">Máx. (°C)</th>
+<th scope="col" class="grp-temp">Horas &lt; 17 °C</th>
+<th scope="col" class="grp-temp">Horas &gt; 27 °C</th>
+<th scope="col" class="grp-temp">ETA27 (°C·h)</th>
+<th scope="col" class="grp-hum">Media (%)</th>
+<th scope="col" class="grp-hum col-extra">Mín. (%)</th>
+<th scope="col" class="grp-hum col-extra">Máx. (%)</th>
+<th scope="col" class="grp-hum">% tiempo fuera de 30–70</th>
+<th scope="col" class="grp-di">Medio</th>
+<th scope="col" class="grp-di">Máx.</th>
+<th scope="col" class="grp-di col-extra">Categoría (medio)</th>
+<th scope="col" class="grp-di col-extra">Horas &gt; 24</th>
+<th scope="col" class="grp-di col-extra">Horas &gt; 27</th>
+<th scope="col" class="grp-di">% tiempo &gt; 24</th>
+<th scope="col" class="grp-di col-extra">% tiempo &gt; 27</th>
+<th scope="col" class="grp-hi">Medio (°C)</th>
+<th scope="col" class="grp-hi">Máx. (°C)</th>
 </tr>
 
 </thead>
@@ -288,16 +513,21 @@ Descargar Informe Global (HTML)
 id="dashboard-summary"
 class="mb-6">
 </div>
+
+<p class="schedule-note text-sm text-slate-600"></p>
+
+<h3 class="subsection-title">Aulas de un vistazo</h3>
+
+<p class="text-sm text-slate-600 mb-3">Ordenadas de mayor a menor severidad. Pulsa un aula para ver su análisis detallado.</p>
+
+<div id="aula-cards" class="aula-cards"></div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-
 <div class="chart-card">
-    <h3>Índice de Disconfort (DI medio)</h3>
-    <p class="chart-description">
-Combina temperatura y humedad para estimar la sensación térmica percibida. Valores superiores a 24 indican disconfort térmico y valores superiores a 27 indican estrés térmico.
-</p>
+    <h3>Índice de Disconfort (DI)</h3>
+    <p class="chart-description">Combina temperatura y humedad para estimar la incomodidad térmica. La barra es el valor medio de todo el periodo y el rombo, el máximo alcanzado; ambos toman el color de su categoría.</p>
     <div class="flex flex-wrap gap-2 mb-4 text-xs mt-2 justify-center">
         <div class="flex items-center gap-1"><span class="di-confortable border px-2 py-1"></span><span>&lt; 21</span></div>
         <div class="flex items-center gap-1"><span class="di-ligero border px-2 py-1"></span><span>21-24</span></div>
@@ -306,99 +536,94 @@ Combina temperatura y humedad para estimar la sensación térmica percibida. Val
         <div class="flex items-center gap-1"><span class="di-intenso border px-2 py-1"></span><span>29-32</span></div>
         <div class="flex items-center gap-1"><span class="di-extremo border px-2 py-1"></span><span>&gt; 32</span></div>
     </div>
-    <canvas id="chartDI"></canvas>
+    <div class="chart-box">
+        <canvas id="chartDI" role="img" aria-label="Índice de Disconfort (DI). Los mismos datos están en la tabla de la pestaña Informe."></canvas>
+    </div>
+</div>
+
+<div class="chart-card">
+    <h3>Heat Index (HI)</h3>
+    <p class="chart-description">Temperatura que «siente» el cuerpo al combinar calor y humedad (Lu &amp; Romps). La barra es el valor medio de todo el periodo y el rombo, el máximo alcanzado.</p>
+    <div class="flex flex-wrap gap-2 mb-4 text-xs mt-2 justify-center">
+        <div class="flex items-center gap-1"><span class="hi-safe border px-2 py-1"></span><span>&lt; 27</span></div>
+        <div class="flex items-center gap-1"><span class="hi-caution border px-2 py-1"></span><span>27-32</span></div>
+        <div class="flex items-center gap-1"><span class="hi-extreme-caution border px-2 py-1"></span><span>32-41</span></div>
+        <div class="flex items-center gap-1"><span class="hi-danger border px-2 py-1"></span><span>41-52</span></div>
+        <div class="flex items-center gap-1"><span class="hi-extreme-danger border px-2 py-1"></span><span>52-93</span></div>
+        <div class="flex items-center gap-1"><span class="hi-limit border px-2 py-1"></span><span>&gt; 93</span></div>
+    </div>
+    <div class="chart-box">
+        <canvas id="chartHI" role="img" aria-label="Heat Index (HI). Los mismos datos están en la tabla de la pestaña Informe."></canvas>
+    </div>
+</div>
+
+<div class="chart-card">
+    <h3>Reparto del tiempo por temperatura</h3>
+    <p class="chart-description">Porcentaje del tiempo evaluado que cada aula ha pasado en cada franja de temperatura. Cuanto más naranja y rojo, más tiempo por encima de 27°C.</p>
+    <div class="chart-box">
+        <canvas id="chartBands" role="img" aria-label="Reparto del tiempo por temperatura. Los mismos datos están en la tabla de la pestaña Informe."></canvas>
+    </div>
+</div>
+
+<div class="chart-card">
+    <h3>ETA27 (calor acumulado)</h3>
+    <p class="chart-description">Suma de los grados por encima de 27°C multiplicados por el tiempo que se mantienen. Cuantifica a la vez la intensidad y la duración del calor.</p>
+    <div class="chart-box">
+        <canvas id="chartETA" role="img" aria-label="ETA27 (calor acumulado). Los mismos datos están en la tabla de la pestaña Informe."></canvas>
+    </div>
+</div>
+
+<div class="chart-card">
+    <h3>Horas por encima de 27°C</h3>
+    <p class="chart-description">Horas en las que la temperatura superó el límite superior del Real Decreto 486/1997.</p>
+    <div class="chart-box">
+        <canvas id="chartHoras27" role="img" aria-label="Horas por encima de 27°C. Los mismos datos están en la tabla de la pestaña Informe."></canvas>
+    </div>
+</div>
+
+<div class="chart-card">
+    <h3>Horas por debajo de 17°C</h3>
+    <p class="chart-description">Horas en las que la temperatura estuvo por debajo del límite inferior del Real Decreto 486/1997.</p>
+    <div class="chart-box">
+        <canvas id="chartHoras17" role="img" aria-label="Horas por debajo de 17°C. Los mismos datos están en la tabla de la pestaña Informe."></canvas>
+    </div>
+</div>
+
+<div class="chart-card">
+    <h3>Humedad fuera de rango</h3>
+    <p class="chart-description">Porcentaje del tiempo evaluado con la humedad relativa fuera del intervalo 30%–70%, separando aire demasiado seco y demasiado húmedo.</p>
+    <div class="chart-box">
+        <canvas id="chartHR" role="img" aria-label="Humedad fuera de rango. Los mismos datos están en la tabla de la pestaña Informe."></canvas>
+    </div>
 </div>
 
 <div class="chart-card">
     <h3>Vulnerabilidad climática</h3>
-    <p class="chart-description">
-Indicador sintético utilizado para comparar el impacto relativo del calor entre aulas. Valores más altos indican una mayor exposición a condiciones térmicas desfavorables.
-</p>
-    <canvas id="chartVulnerability"></canvas>
-</div>
-
-<div class="chart-card">
-    <h3>Heat Index medio</h3>
-    <p class="chart-description">
-Índice de calor oficial que combina temperatura y humedad para evaluar el estrés térmico fisiológico (Lu & Romps).
-</p>
-    <div class="flex flex-wrap gap-2 mb-4 text-xs mt-2 justify-center">
-        <div class="flex items-center gap-1"><span class="hi-safe border px-2 py-1"></span><span>&lt; 27</span></div>
-        <div class="flex items-center gap-1"><span class="hi-caution border px-2 py-1"></span><span>27-32</span></div>
-        <div class="flex items-center gap-1"><span class="hi-extreme-caution border px-2 py-1"></span><span>33-40</span></div>
-        <div class="flex items-center gap-1"><span class="hi-danger border px-2 py-1"></span><span>41-51</span></div>
-        <div class="flex items-center gap-1"><span class="hi-extreme-danger border px-2 py-1"></span><span>52-93</span></div>
-        <div class="flex items-center gap-1"><span class="hi-limit border px-2 py-1"></span><span>&gt; 93</span></div>
-    </div>
-    <canvas id="chartHI"></canvas>
-</div>
-
-<div class="chart-card">
-<h3>ETA27</h3>
-<p class="chart-description">
-Acumulación del exceso de temperatura por encima de 27°C a lo largo del tiempo. Permite cuantificar la intensidad y duración de la exposición al calor.
-</p>
-<canvas id="chartETA"></canvas>
-</div>
-
-<div class="chart-card">
-    <h3>Horas &gt;27°C</h3>
-    <p class="chart-description">Número total de horas en las que la temperatura superó el límite superior recomendado por el Real Decreto 486/1997.</p>
-    <div class="relative w-full h-64">
-        <canvas id="chartHoras27"></canvas>
-    </div>
-</div>
-
-<div class="chart-card">
-    <h3>Horas &lt;17°C</h3>
-    <p class="chart-description">Número total de horas en las que la temperatura estuvo por debajo del límite inferior recomendado por el Real Decreto 486/1997.</p>
-    <div class="relative w-full h-64">
-        <canvas id="chartHoras17"></canvas>
-    </div>
-</div>
-
-<div class="chart-card">
-    <h3>% Humedad fuera de rango</h3>
-    <p class="chart-description">Porcentaje del tiempo en el que la humedad relativa estuvo fuera del intervalo recomendado (30%–70%).</p>
-    <div class="relative w-full h-64">
-        <canvas id="chartHR"></canvas>
+    <p class="chart-description">Indicador sintético (ETA27 × 2 + porcentaje de tiempo por encima de 27°C) para comparar aulas entre sí dentro de un mismo periodo.</p>
+    <div class="chart-box">
+        <canvas id="chartVulnerability" role="img" aria-label="Vulnerabilidad climática. Los mismos datos están en la tabla de la pestaña Informe."></canvas>
     </div>
 </div>
 
 </div>
 
-</div>
+<div class="chart-card mt-8">
 
-
-
-</div>
-
-<div class="mt-8">
-
-<h3 class="font-bold text-lg mb-4">
-
-Evolución temporal
-
-</h3>
-<h3 class="font-bold text-lg mb-2">
-Evolución temporal
-</h3>
+<h3>Evolución temporal de la temperatura</h3>
 
 <p class="chart-description">
-Temperatura registrada en cada aula durante el periodo monitorizado. Permite identificar episodios de sobrecalentamiento y comparar el comportamiento térmico de los distintos espacios.
+Temperatura registrada en cada aula. La banda verde marca el intervalo 17–27°C y las franjas sombreadas, el horario lectivo (si el periodo no supera dos meses). Pasa el ratón por un aula de la leyenda para resaltarla, o púlsala para ocultarla.
 </p>
+
 <div class="line-chart-container">
-
-<canvas id="chartEvolution"></canvas>
-
+<canvas id="chartEvolution" role="img" aria-label="Evolución temporal de la temperatura de todas las aulas"></canvas>
 </div>
 
 </div>
-<div class="card mt-8">
 
-<h3 class="section-title">
-Criterios de interpretación
-</h3>
+<details class="card mt-8 fold">
+
+<summary>Criterios de interpretación</summary>
 
 <ul class="list-disc ml-6 space-y-4">
 
@@ -407,7 +632,7 @@ Criterios de interpretación
 </li>
 
 <li>
-<strong>Vulnerabilidad climática:</strong> Indicador sintético (0 a 100) para comparar aulas. Valores altos denotan mayor tiempo de exposición al calor y sobrecalentamiento sostenido.
+<strong>Vulnerabilidad climática:</strong> Indicador sintético sin límite superior (ETA27 × 2 + porcentaje de tiempo por encima de 27°C) que solo sirve para comparar aulas entre sí dentro de un mismo periodo. Valores altos denotan mayor tiempo de exposición al calor y sobrecalentamiento sostenido.
 </li>
 
 <li>
@@ -419,7 +644,7 @@ Criterios de interpretación
 <ul class="list-circle ml-6 mt-1 text-sm text-slate-600">
 <li><strong>&lt; 21:</strong> Confortable.</li>
 <li><strong>21 – 24:</strong> Ligero disconfort.</li>
-<li><strong>24 – 27:</strong> Disconfort térmico.</li>
+<li><strong>24 – 27:</strong> Disconfort moderado.</li>
 <li><strong>27 – 29:</strong> Disconfort severo.</li>
 <li><strong>29 – 32:</strong> Estrés térmico intenso.</li>
 <li><strong>&gt; 32:</strong> Estrés térmico extremo.</li>
@@ -431,16 +656,16 @@ Criterios de interpretación
 <ul class="list-circle ml-6 mt-1 text-sm text-slate-600">
 <li><strong>&lt; 27:</strong> Seguro.</li>
 <li><strong>27 – 32:</strong> Precaución (fatiga posible).</li>
-<li><strong>33 – 40:</strong> Precaución extrema (calambres, agotamiento).</li>
-<li><strong>41 – 51:</strong> Peligro (golpe de calor posible).</li>
-<li><strong>&gt; 51:</strong> Peligro extremo (colapso térmico inminente).</li>
+<li><strong>32 – 41:</strong> Precaución extrema (calambres, agotamiento).</li>
+<li><strong>41 – 52:</strong> Peligro (golpe de calor posible).</li>
+<li><strong>52 – 93:</strong> Peligro extremo (golpe de calor muy probable).</li>
+<li><strong>&gt; 93:</strong> Límite fisiológico (la termorregulación no es posible).</li>
 </ul>
 </li>
 
 </ul>
 
-</div>
-</div>
+</details>
 
 </section>
 <section
@@ -468,58 +693,33 @@ Exportar PDF
 <div class="mb-4 flex flex-wrap gap-4 items-center">
 
 <div>
-
-<label
-for="mapTypeSelector"
-class="font-bold">
-
-Tipo de mapa:
-
-</label>
-
-<select
-id="mapTypeSelector"
-class="border rounded p-2 ml-2">
-
-<option value="temperature">
-Temperatura
-</option>
-
-<option value="di">
-Índice de Disconfort (DI)
-</option>
-
-<option value="heatindex">
-Heat Index (Romps)
-</option>
-
+<label for="mapTypeSelector" class="font-bold">Indicador:</label>
+<select id="mapTypeSelector" class="border rounded p-2 ml-2">
+<option value="temperature">Temperatura</option>
+<option value="di">Índice de Disconfort (DI)</option>
+<option value="heatindex">Heat Index (Romps)</option>
 </select>
-
 </div>
 
 <div>
-
-<label
-for="daySelector"
-class="font-bold">
-
-Fecha:
-
-</label>
-
-<select
-id="daySelector"
-class="border rounded p-2 ml-2">
-
+<label for="mapViewSelector" class="font-bold">Vista:</label>
+<select id="mapViewSelector" class="border rounded p-2 ml-2">
+<option value="day">Un día, todas las aulas</option>
+<option value="aula">Un aula, todos los días</option>
 </select>
+</div>
 
+<div id="mapDayGroup">
+<label for="daySelector" class="font-bold">Fecha:</label>
+<select id="daySelector" class="border rounded p-2 ml-2"></select>
+</div>
+
+<div id="mapAulaGroup" class="is-hidden">
+<label for="mapAulaSelector" class="font-bold">Aula:</label>
+<select id="mapAulaSelector" class="border rounded p-2 ml-2"></select>
 </div>
 
 </div>
-
-<h3 class="font-bold text-lg mb-2">
-Temperatura
-</h3>
 
 <div id="temperatureHeatmap"></div>
 
@@ -561,11 +761,13 @@ Temperatura
 </div>
 </div>
 
+<div id="aula-kpis" class="mb-6"></div>
+
 <div class="grid grid-cols-1 gap-6">
 
 <div class="chart-card">
     <h3>Evolución de Temperatura e Índices Térmicos</h3>
-    <p class="chart-description">Comparativa temporal de la temperatura real registrada frente al Índice de Disconfort (DI) y al Heat Index (HI).</p>
+    <p class="chart-description">Temperatura registrada frente al Índice de Disconfort (DI) y al Heat Index (HI). Banda verde: intervalo 17–27°C. Franjas sombreadas: horario lectivo. Los huecos de datos se dejan en blanco.</p>
     <div class="line-chart-container">
         <canvas id="chartAulaIndices"></canvas>
     </div>
@@ -573,7 +775,7 @@ Temperatura
 
 <div class="chart-card">
     <h3>Evolución de la Humedad Relativa</h3>
-    <p class="chart-description">Variación temporal de la humedad relativa (%) en el aula.</p>
+    <p class="chart-description">Humedad relativa (%) en el aula. Banda verde: intervalo recomendado 30–70%.</p>
     <div class="line-chart-container">
         <canvas id="chartAulaHumedad"></canvas>
     </div>
@@ -597,7 +799,7 @@ Temperatura
             </p>
         </div>
         <div class="text-xs text-slate-500 whitespace-nowrap">
-            Agente Clima IES v2.2
+            Agente Clima IES v2.3
         </div>
     </div>
 </footer>

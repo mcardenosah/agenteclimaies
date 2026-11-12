@@ -69,6 +69,14 @@ Se calcula:
 
 Asimismo se calculan los porcentajes de tiempo asociados a cada situación.
 
+#### Horario evaluado
+Por defecto, estos tiempos, el ETA27, las horas de DI, la severidad y el cumplimiento del RD 486/1997 se evalúan únicamente en **horario lectivo** (de lunes a viernes, de 08:00 a 15:00), que es cuando las aulas están ocupadas. Los días y la franja horaria se pueden cambiar en la pestaña Informe, o se puede desactivar el filtro para evaluar las 24 horas de todos los días.
+
+* Un registro cuenta como lectivo si su hora de inicio cae dentro del horario.
+* Los días festivos y las vacaciones no se excluyen automáticamente.
+* Las medias, mínimos y máximos de temperatura, humedad, DI y HI se calculan siempre sobre todo el periodo registrado.
+* Si un aula no tiene ningún dato dentro del horario, su cumplimiento y severidad se muestran como «Sin datos».
+
 ---
 
 ### 4.3. Índice de Disconfort de Thom (DI)
@@ -117,6 +125,22 @@ Ambas situaciones generan impactos diferentes y ETA27 permite cuantificar esa di
 
 ---
 
+#### Clasificación de severidad
+La severidad de cada aula (Verde, Amarillo, Naranja, Rojo) combina dos magnitudes:
+* **ETA27 semanal:** ETA27 normalizado a una semana de registro (`ETA27 / horas con datos × 168`), para que el resultado no dependa de la duración de la campaña de medida. El ETA27 se acumula solo dentro del horario evaluado; las horas con datos son todas las registradas.
+* **Impacto:** suma del porcentaje de tiempo por debajo de 17 °C y del porcentaje de tiempo con humedad relativa fuera del intervalo 30–70 %.
+
+| Severidad | Condición |
+|---|---|
+| Verde | ETA27 semanal = 0 e impacto = 0 |
+| Amarillo | ETA27 semanal < 5 °C·h e impacto < 5 % |
+| Naranja | ETA27 semanal < 20 °C·h e impacto < 20 % |
+| Rojo | Resto de casos |
+
+Estos umbrales son operativos, propios del proyecto, y se evalúan sobre el horario seleccionado (véase el apartado 4.2).
+
+---
+
 ### 4.5. Extended Heat Index (HI)
 
 #### Definición
@@ -126,7 +150,7 @@ El Heat Index (HI) o Índice de Calor es un indicador biometeorológico que comb
 Mientras que el Índice de Thom (DI) evalúa el grado de disconfort térmico percibido, el Heat Index estima el esfuerzo fisiológico que debe realizar el organismo para mantener constante su temperatura corporal. Ambos proporcionan información complementaria.
 
 #### Implementación (Lu & Romps, 2022)
-El Agente Clima IES implementa el *Extended Heat Index*, desarrollado por Lu & Romps (2022). Constituye una adaptación directa a JavaScript de la implementación oficial distribuida por los autores, superando las limitaciones de la aproximación polinómica clásica de Rothfusz para extremos climáticos.
+El Agente Clima IES implementa el *Extended Heat Index*, desarrollado por Lu & Romps (2022). Es una implementación en JavaScript del algoritmo completo publicado por los autores (regiones I a VI del modelo, incluidas las correspondientes a una persona vestida), superando las limitaciones de la aproximación polinómica clásica de Rothfusz para extremos climáticos.
 
 #### Clasificación y Efectos en la Salud
 La clasificación sigue la escala empleada por el National Weather Service (NWS) e ISGlobal:
@@ -135,8 +159,8 @@ La clasificación sigue la escala empleada por el National Weather Service (NWS)
 |---|---|---|
 | < 27 | Seguro | La termorregulación funciona con normalidad. |
 | 27 – 32 | Precaución | Aumenta el esfuerzo termorregulador. |
-| 33 – 40 | Precaución extrema | La evaporación del sudor comienza a ser insuficiente. |
-| 41 – 51 | Peligro | Dificultades crecientes para mantener estable la temperatura. |
+| 32 – 41 | Precaución extrema | La evaporación del sudor comienza a ser insuficiente. |
+| 41 – 52 | Peligro | Dificultades crecientes para mantener estable la temperatura. |
 | 52 – 93 | Peligro extremo | Mecanismos de compensación prácticamente agotados. |
 | > 93 | Límite fisiológico | La temperatura corporal aumenta irreversiblemente. |
 

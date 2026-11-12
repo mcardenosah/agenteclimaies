@@ -53,6 +53,8 @@ function saveProject() {
 
         },
 
+        scheduleConfig,
+
         rawData,
 
         processedStats
@@ -153,6 +155,16 @@ function handleProjectLoad(
 
                 rawData =
                     project.rawData || {};
+                importWarnings = [];
+
+                // Horario lectivo guardado con el proyecto
+                if (project.scheduleConfig) {
+                    Object.assign(
+                        scheduleConfig,
+                        project.scheduleConfig
+                    );
+                    syncScheduleUI();
+                }
 
                 // Ya no cargamos processedStats, se regenerará
                 // automáticamente con finishProcessing()

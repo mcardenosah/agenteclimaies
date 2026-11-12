@@ -14,7 +14,7 @@ El motor de cálculo interno está programado siguiendo rigurosos criterios:
 - **Cálculo de Severidad (ETA27):** Incorpora el cálculo integral de la Exposición Térmica Acumulada ($ETA_{27}$) mediante la fórmula: `MAX(0, temperatura - 27) × intervalo_valido_en_horas`. Esto permite evaluar no solo cuántas horas se supera el límite, sino la intensidad del calor sufrido.
 - **Índice de Disconfort de Thom (DI):** Evalúa el grado de confort o disconfort térmico percibido combinando temperatura y humedad relativa.
 - **Extended Heat Index (HI):** Implementa el modelo fisiológico avanzado de Lu & Romps (2022) para estimar el esfuerzo fisiológico de termorregulación frente a combinaciones de calor y humedad extremas.
-- **Validación Dinámica:** El sistema detecta y excluye "huecos de datos" (intervalos de lectura superiores a 22,5 minutos), garantizando que solo se evalúa el tiempo de exposición real y continuo.
+- **Validación Dinámica:** El sistema detecta y excluye "huecos de datos" (intervalos de lectura superiores al triple del intervalo de muestreo habitual de cada sensor; por ejemplo, 45 minutos con lecturas cada 15 minutos), garantizando que solo se evalúa el tiempo de exposición real y continuo.
 
 ## 🚀 Características y Funcionalidades
 
