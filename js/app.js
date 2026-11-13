@@ -51,7 +51,79 @@ function openTab(tabId) {
 // un hueco de datos. Se generan siempre igual.
 // -----------------------------------------------------
 
+// -----------------------------------------------------
+// Datos de demostración
+//
+// Se cargan de data/ejemplo.js solo cuando se piden, para
+// no retrasar el arranque. Son registros de 21 aulas con
+// nombres ficticios. Si el archivo no está disponible se
+// usa un conjunto sintético generado al momento.
+// -----------------------------------------------------
+
 function loadSampleData() {
+
+    const estado =
+        document.getElementById("processing-status");
+
+    if (estado) {
+        estado.classList.remove("hidden");
+    }
+
+    const usar = () => {
+
+        const ejemplo = window.AGENTE_CLIMA_EJEMPLO;
+
+        const datos = {};
+
+        Object.keys(ejemplo.aulas).forEach(aula => {
+
+            const serie = ejemplo.aulas[aula];
+
+            let minutos = ejemplo.base;
+
+            datos[aula] = serie.t.map((paso, i) => {
+
+                minutos += paso;
+
+                return {
+                    timestamp: new Date(minutos * 60000),
+                    temp: serie.T[i] / 10,
+                    hum: serie.H[i] / 10
+                };
+            });
+        });
+
+        rawData = datos;
+
+        importWarnings = [
+            "estás viendo datos de demostración; los nombres de las aulas son ficticios."
+        ];
+
+        // Dejar que se pinte el aviso de «Procesando» antes de calcular
+        setTimeout(finishProcessing, 30);
+    };
+
+    if (window.AGENTE_CLIMA_EJEMPLO) {
+        usar();
+        return;
+    }
+
+    const script = document.createElement("script");
+
+    script.src = "data/ejemplo.js";
+
+    script.onload = usar;
+
+    script.onerror = () => {
+        console.warn("No se ha podido cargar data/ejemplo.js; se usan datos sintéticos.");
+        loadSyntheticSample();
+    };
+
+    document.head.appendChild(script);
+}
+
+// Conjunto sintético de reserva
+function loadSyntheticSample() {
 
     let semilla = 20250602;
 
