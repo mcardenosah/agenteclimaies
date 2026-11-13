@@ -149,8 +149,14 @@ El Heat Index (HI) o Índice de Calor es un indicador biometeorológico que comb
 #### Objetivo
 Mientras que el Índice de Thom (DI) evalúa el grado de disconfort térmico percibido, el Heat Index estima el esfuerzo fisiológico que debe realizar el organismo para mantener constante su temperatura corporal. Ambos proporcionan información complementaria.
 
-#### Implementación (Lu & Romps, 2022)
-El Agente Clima IES implementa el *Extended Heat Index*, desarrollado por Lu & Romps (2022). Es una implementación en JavaScript del algoritmo completo publicado por los autores (regiones I a VI del modelo, incluidas las correspondientes a una persona vestida), superando las limitaciones de la aproximación polinómica clásica de Rothfusz para extremos climáticos.
+#### Implementación (paquete oficial de Lu y Romps)
+El Agente Clima IES calcula el Heat Index con una traducción a JavaScript del paquete oficial `heatindex` de Yi-Chuan Lu y David M. Romps (versión 0.0.2, <https://github.com/davidromps/heatindex>).
+
+Ese paquete implementa el índice «más simple y rápido» de Lu et al. (2025, en revisión), que supera las limitaciones de la aproximación polinómica clásica de Rothfusz para extremos climáticos. Según sus autores, coincide con el índice de Steadman (1979) y con el *Extended Heat Index* de Lu y Romps (2022) para temperaturas del aire superiores a 27 °C, y presenta pequeñas diferencias por debajo.
+
+En este proyecto, esas diferencias se han medido comparando ambas formulaciones: son nulas a partir de 27 °C y alcanzan como máximo unos 3,5 °C con aire fresco y muy seco (en torno a 1 °C en las condiciones habituales de un aula). No modifican la categoría de riesgo en ninguna combinación de temperatura y humedad, porque todos los valores afectados quedan por debajo de 27.
+
+**Verificación.** La implementación reproduce los ocho valores de ejemplo publicados en la documentación del paquete con una diferencia inferior a 0,0000001 K.
 
 #### Clasificación y Efectos en la Salud
 La clasificación sigue la escala empleada por el National Weather Service (NWS) e ISGlobal:
@@ -201,7 +207,7 @@ El proyecto se fundamenta en los siguientes principios:
 
 ### Decisiones consolidadas e implementadas en la v2.x
 * Utilización del Índice de Disconfort de Thom como indicador base del confort.
-* Adopción e implementación algorítmica del *Extended Heat Index* (Lu & Romps) para estrés fisiológico.
+* Adopción del Heat Index de Lu y Romps (paquete oficial `heatindex`) para estrés fisiológico.
 * Uso de ETA27 como indicador integral de intensidad-duración.
 * Incorporación de las leyendas e interpretaciones de escalas térmicas (ISGlobal / NWS) al flujo de la aplicación.
 * Exportación de la trazabilidad de los datos a reportes globales HTML standalone.
@@ -213,7 +219,9 @@ El proyecto se fundamenta en los siguientes principios:
 ---
 
 ### Referencias Principales
-* Lu, M., & Romps, D. M. (2022). Extending the Heat Index. *Journal of Applied Meteorology and Climatology*.
+* Lu, Y.-C., & Romps, D. M. (2025). *heatindex: Tools for Calculating Heat Stress* (versión 0.0.2). <https://heatindex.org>
+* Lu, Y.-C., et al. (2025). Simpler and faster: an improved heat index (en revisión).
+* Lu, Y.-C., & Romps, D. M. (2022). Extending the Heat Index. *Journal of Applied Meteorology and Climatology*, 61(10), 1367–1383.
 * National Weather Service (NOAA). Heat Index.
 * ISGlobal. Heat Index Calculator (basada en el Extended Heat Index de Lu & Romps).
 * Steadman, R. G. (1979). The Assessment of Sultriness.

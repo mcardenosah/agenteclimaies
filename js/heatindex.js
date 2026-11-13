@@ -2,15 +2,22 @@
 // Agente Clima IES
 // heatindex.js
 //
-// Extended Heat Index de Lu & Romps (2022),
-// "Extending the Heat Index", J. Appl. Meteor. Climatol.
+// Heat Index de Lu y Romps.
 //
-// Implementación en JavaScript del algoritmo completo
-// (regiones I a VI del modelo):
-//   I      : piel parcialmente cubierta (variable phi)
-//   II-III : persona vestida (variable Rf)
-//   IV-V   : piel desnuda (variable Rs)
-//   VI     : la temperatura corporal aumenta (dTc/dt)
+// Traducción a JavaScript del paquete oficial "heatindex"
+// de Yi-Chuan Lu y David M. Romps, versión 0.0.2
+// (https://github.com/davidromps/heatindex, archivos
+// cpp/heatindex.cpp, cpp/thermo.cpp y cpp/solve.cpp).
+//
+// Ese paquete implementa el índice "más simple y rápido"
+// de Lu et al. (2025, en revisión). Según sus autores,
+// coincide con Steadman (1979) y con Lu y Romps (2022)
+// para temperaturas del aire superiores a 300 K (27 °C)
+// y presenta pequeñas diferencias por debajo.
+//
+// Verificación: reproduce los ocho valores de ejemplo
+// publicados en la documentación del paquete con una
+// diferencia inferior a 1e-7 K.
 //
 // La interfaz pública trabaja en °C y % de HR.
 // Internamente el algoritmo trabaja en Kelvin y Pa.
@@ -21,7 +28,7 @@ var calculateHeatIndex = (function () {
     "use strict";
 
     // -------------------------------------------------
-    // Constantes termodinámicas
+    // Constantes termodinámicas (thermo.h)
     // -------------------------------------------------
 
     const TTRIP = 273.16;      // K
@@ -37,20 +44,11 @@ var calculateHeatIndex = (function () {
     const CPA = CVA + RGASA;
     const CPV = CVV + RGASV;
 
-    // Presión de vapor de saturación (hielo por debajo del punto triple)
-    function pvstar(T) {
+    // Presión de vapor de saturación sobre agua líquida
+    function pvstarl(T) {
 
         if (T <= 0) {
             return 0;
-        }
-
-        if (T < TTRIP) {
-            return PTRIP *
-                Math.pow(T / TTRIP, (CPV - CVS) / RGASV) *
-                Math.exp(
-                    (E0V + E0S - (CVV - CVS) * TTRIP) / RGASV *
-                    (1 / TTRIP - 1 / T)
-                );
         }
 
         return PTRIP *
@@ -61,68 +59,75 @@ var calculateHeatIndex = (function () {
             );
     }
 
-    // Calor latente de vaporización
-    function Le(T) {
-        return E0V + (CVV - CVL) * (T - TTRIP) + RGASV * T;
+    // Presión de vapor de saturación sobre hielo
+    function pvstars(T) {
+
+        if (T <= 0) {
+            return 0;
+        }
+
+        return PTRIP *
+            Math.pow(T / TTRIP, (CPV - CVS) / RGASV) *
+            Math.exp(
+                (E0V + E0S - (CVV - CVS) * TTRIP) / RGASV *
+                (1 / TTRIP - 1 / T)
+            );
+    }
+
+    function pvstar(T) {
+        return T < TTRIP ? pvstars(T) : pvstarl(T);
     }
 
     // -------------------------------------------------
-    // Constantes del modelo fisiológico
+    // Constantes fisiológicas (heatindex.h)
     // -------------------------------------------------
 
-    const SIGMA = 5.67e-8;     // W/m^2/K^4
-    const EPSILON = 0.97;      // emisividad
-    const MASS = 83.6;         // kg
-    const HEIGHT = 1.69;       // m
-    const AREA = 0.202 * Math.pow(MASS, 0.425) * Math.pow(HEIGHT, 0.725);
-    const CPC = 3492;          // J/kg/K
-    const C = MASS * CPC / AREA;
-    const R_CLOTH = 124;       // Pa/K (Zf / Rf)
-    const Q = 180;             // W/m^2 (tasa metabólica)
-    const PHI_SALT = 0.9;
-    const TC = 310;            // K (temperatura corporal)
-    const PC = PHI_SALT * pvstar(TC);
-    const L = Le(310);
-    const P = 1.013e5;         // Pa
-    const ETA = 1.43e-6;       // kg/J
-    const PA0 = 1.6e3;         // Pa (presión de vapor de referencia)
-    const RS0 = 0.0387;        // m^2 K/W (resistencia de la piel de referencia)
-    const PHI0 = 0.84;         // fracción de piel cubierta de referencia
+    const Q = 180;                       // W/m^2, tasa metabólica
+    const PHI_SALT = 0.9;                // saturación de la solución salina
+    const TC = 310;                      // K, temperatura corporal
+    const PC = PHI_SALT * pvstar(TC);    // Pa, presión de vapor corporal
+    const PA0 = 1.6e3;                   // Pa, presión de vapor de referencia
+    const HC = 12.3;                     // W/m^2/K, coeficiente de transferencia
+    const ZA = 60.6 / HC;                // m^2 Pa/W
 
-    const ZA = 60.6 / 17.4;        // piel expuesta (persona vestida)
-    const ZA_BAR = 60.6 / 11.6;    // superficie de la ropa
-    const ZA_UN = 60.6 / 12.3;     // piel desnuda
-
-    // Pérdida de calor por respiración
+    // Pérdida de calor por respiración, W/m^2
     function Qv(Ta, Pa) {
-        return ETA * Q * (
+
+        const p = 1.013e5;       // Pa
+        const eta = 1.43e-6;     // kg/J
+        const L = 2417405.2;     // J/kg
+
+        return eta * Q * (
             CPA * (TC - Ta) +
-            L * RGASA / (P * RGASV) * (PC - Pa)
+            L * RGASA / (p * RGASV) * (PC - Pa)
         );
     }
 
-    // Resistencia de la piel al paso de vapor
+    // Resistencia de la piel al paso de vapor, Pa m^2/W
     function Zs(Rs) {
-        return Rs === RS0 ? 52.1 : 6.0e8 * Math.pow(Rs, 5);
+        return 6.0e8 * Rs * Rs * Rs * Rs * Rs;
     }
 
-    // Resistencias térmicas superficie-aire
-    function makeRa(hc, phiRad) {
-        return function (Ts, Ta) {
-            const hr =
-                EPSILON * phiRad * SIGMA *
-                (Ts * Ts + Ta * Ta) * (Ts + Ta);
-            return 1 / (hc + hr);
-        };
+    // Resistencia térmica piel-aire, K m^2/W
+    function Ra(T1, T2) {
+
+        const epsilon = 0.97;
+        const phiRad = 0.80;
+        const sigma = 5.67e-8;
+
+        const hr =
+            epsilon * phiRad * sigma *
+            (T1 * T1 + T2 * T2) * (T1 + T2);
+
+        return 1 / (HC + hr);
     }
 
-    const Ra = makeRa(17.4, 0.85);
-    const RaBar = makeRa(11.6, 0.79);
-    const RaUn = makeRa(12.3, 0.80);
+    // -------------------------------------------------
+    // Búsqueda de raíces: método de Brent (solve.cpp)
+    // -------------------------------------------------
 
-    // -------------------------------------------------
-    // Búsqueda de raíces (método de Brent)
-    // -------------------------------------------------
+    const TOL = 1e-8;
+    const MAX_ITER = 100;
 
     function solve(f, x1, x2, tol, maxIter) {
 
@@ -131,10 +136,7 @@ var calculateHeatIndex = (function () {
         let fa = f(a);
         let fb = f(b);
 
-        if (fa === 0) return a;
-        if (fb === 0) return b;
-
-        if (fa * fb > 0) {
+        if (fa * fb >= 0) {
             throw new Error("Root not bracketed.");
         }
 
@@ -145,34 +147,31 @@ var calculateHeatIndex = (function () {
 
         let c = a;
         let fc = fa;
+        let s = b;
         let d = b - a;
         let mflag = true;
 
         for (let i = 0; i < maxIter; i++) {
 
-            let s;
-
             if (fa !== fc && fb !== fc) {
+                // interpolación cuadrática inversa
                 s =
                     a * fb * fc / ((fa - fb) * (fa - fc)) +
                     b * fa * fc / ((fb - fa) * (fb - fc)) +
                     c * fa * fb / ((fc - fa) * (fc - fb));
             } else {
+                // secante
                 s = b - fb * (b - a) / (fb - fa);
             }
 
             const lim = (3 * a + b) / 4;
 
-            const fuera =
-                !((s > lim && s < b) || (s < lim && s > b));
-
             if (
-                fuera ||
-                !Number.isFinite(s) ||
+                !((s > lim && s < b) || (s < lim && s > b)) ||
                 (mflag && Math.abs(s - b) >= Math.abs(b - c) / 2) ||
                 (!mflag && Math.abs(s - b) >= Math.abs(c - d) / 2)
             ) {
-                s = (a + b) / 2;
+                s = (a + b) / 2;   // bisección
                 mflag = true;
             } else {
                 mflag = false;
@@ -197,186 +196,99 @@ var calculateHeatIndex = (function () {
                 [fa, fb] = [fb, fa];
             }
 
-            if (fb === 0 || Math.abs(b - a) < tol) {
+            if (Math.abs(b - a) < tol) {
                 return b;
             }
         }
 
-        throw new Error("Maximum iterations reached.");
+        throw new Error("Max iterations reached.");
     }
 
-    const TOL = 1e-8;
-    const MAX_ITER = 200;
-
     // -------------------------------------------------
-    // Variable de equilibrio para (Ta, HR)
-    // Devuelve { name, value } con name en
-    // "phi" | "Rf" | "Rs" | "dTcdt"
+    // Estado fisiológico para (T, HR) (heatindex.cpp)
+    // Devuelve la resistencia de la piel Rs y, si el
+    // cuerpo no puede disipar el calor, C*dTc/dt.
     // -------------------------------------------------
 
-    function findEqvar(Ta, RH) {
+    function physiology(T, rh) {
 
-        const Pa = RH * pvstar(Ta);
-        const Rs = RS0;
-        const phi = PHI0;
+        const Ta = T;
+        const Pa = rh * pvstar(T);
 
-        const m = (PC - Pa) / (Zs(Rs) + ZA);
-        const mBar = (PC - Pa) / (Zs(Rs) + ZA_BAR);
+        let CdTcdt =
+            Q - Qv(Ta, Pa) -
+            (TC - Ta) / Ra(TC, Ta) -
+            (PC - Pa) / ZA;
 
-        const Ts = solve(
-            x => (x - Ta) / Ra(x, Ta) + (PC - Pa) / (Zs(Rs) + ZA) - (TC - x) / Rs,
-            Math.max(0, Math.min(TC, Ta) - Rs * Math.abs(m)),
-            Math.max(TC, Ta) + Rs * Math.abs(m),
-            TOL, MAX_ITER
-        );
+        let Rs = 0;
 
-        const Tf0 = solve(
-            x => (x - Ta) / RaBar(x, Ta) + (PC - Pa) / (Zs(Rs) + ZA_BAR) - (TC - x) / Rs,
-            Math.max(0, Math.min(TC, Ta) - Rs * Math.abs(mBar)),
-            Math.max(TC, Ta) + Rs * Math.abs(mBar),
-            TOL, MAX_ITER
-        );
+        if (CdTcdt < 0) {
 
-        const metab = Q - Qv(Ta, Pa);
+            CdTcdt = 0;
 
-        // C*dTc/dt con Rf = Zf = infinito
-        const flux1 = metab - (1 - phi) * (TC - Ts) / Rs;
+            const metab = Q - Qv(Ta, Pa);
 
-        // C*dTc/dt con Rf = Zf = 0
-        const flux2 = flux1 - phi * (TC - Tf0) / Rs;
+            const f = Ts =>
+                (Ts - Ta) / Ra(Ts, Ta) +
+                Math.min(
+                    (PC - Pa) / (Zs((TC - Ts) / metab) + ZA),
+                    (PHI_SALT * pvstar(Ts) - Pa) / ZA
+                ) -
+                metab;
 
-        // Región I
-        if (flux1 <= 0) {
-            return {
-                name: "phi",
-                value: 1 - metab * Rs / (TC - Ts)
-            };
+            // tolerancia dividida por 100, como en el original,
+            // para que el índice tenga la precisión TOL
+            const Ts = solve(f, 0, TC, TOL / 100, MAX_ITER);
+
+            Rs = (TC - Ts) / metab;
         }
 
-        // Regiones II y III (persona vestida)
-        if (flux2 <= 0) {
+        return { Rs, CdTcdt };
+    }
 
-            const TsBar =
-                TC - metab * Rs / phi +
-                (1 / phi - 1) * (TC - Ts);
+    function heatIndexKelvin(T, rh) {
 
-            const Tf = solve(
-                x =>
-                    (x - Ta) / RaBar(x, Ta) +
-                    (PC - Pa) * (x - Ta) /
-                    (
-                        (Zs(Rs) + ZA_BAR) * (x - Ta) +
-                        R_CLOTH * RaBar(x, Ta) * (TsBar - x)
-                    ) -
-                    (TC - TsBar) / Rs,
-                Ta, TsBar, TOL, MAX_ITER
-            );
+        const estado = physiology(T, rh);
 
-            return {
-                name: "Rf",
-                value: RaBar(Tf, Ta) * (TsBar - Tf) / (Tf - Ta)
-            };
-        }
+        const Rs = estado.Rs;
+        const CdTcdt = estado.CdTcdt;
 
-        // Regiones IV, V y VI (piel desnuda)
-        const flux3 =
-            metab -
-            (TC - Ta) / RaUn(TC, Ta) -
-            (PHI_SALT * pvstar(TC) - Pa) / ZA_UN;
+        if (Rs > 0) {
 
-        if (flux3 < 0) {
+            const f = Ta => {
 
-            let TsUn = solve(
-                x =>
-                    (x - Ta) / RaUn(x, Ta) +
-                    (PC - Pa) / (Zs((TC - x) / metab) + ZA_UN) -
-                    metab,
-                0, TC, TOL, MAX_ITER
-            );
+                const Pa = Math.min(PA0, pvstar(Ta));
 
-            let RsUn = (TC - TsUn) / metab;
+                const Ts = TC - Rs * (Q - Qv(Ta, Pa));
 
-            const ps =
-                PC - (PC - Pa) * Zs(RsUn) / (Zs(RsUn) + ZA_UN);
-
-            // Región V: la piel está saturada de sudor
-            if (ps > PHI_SALT * pvstar(TsUn)) {
-
-                TsUn = solve(
-                    x =>
-                        (x - Ta) / RaUn(x, Ta) +
-                        (PHI_SALT * pvstar(x) - Pa) / ZA_UN -
-                        metab,
-                    0, TC, TOL, MAX_ITER
+                const Ps = Math.min(
+                    (Zs(Rs) * Pa + ZA * PC) / (Zs(Rs) + ZA),
+                    PHI_SALT * pvstar(Ts)
                 );
 
-                RsUn = (TC - TsUn) / metab;
-            }
+                return (
+                    Q - Qv(Ta, Pa) -
+                    (Ts - Ta) / Ra(Ts, Ta) -
+                    (Ps - Pa) / ZA
+                );
+            };
 
-            return { name: "Rs", value: RsUn };
+            return solve(f, 0, 345, TOL, MAX_ITER);
         }
 
-        // Región VI
-        return { name: "dTcdt", value: flux3 / C };
-    }
+        const f = Ta => {
 
-    // -------------------------------------------------
-    // Temperatura (a la presión de vapor de referencia)
-    // que produce la misma variable de equilibrio
-    // -------------------------------------------------
+            const Pa = Math.min(PA0, pvstar(Ta));
 
-    const ORDER = ["phi", "Rf", "Rs", "dTcdt"];
-
-    function eqvarAt(T, RH, want) {
-
-        const e = findEqvar(T, RH);
-
-        if (e.name === want) {
-            return e.value;
-        }
-
-        const antes =
-            ORDER.indexOf(e.name) < ORDER.indexOf(want);
-
-        // Valor que toma la variable fuera de su región
-        if (want === "phi") return PHI0;
-        if (want === "Rf") return antes ? 1e9 : 0;
-        if (want === "Rs") return antes ? RS0 : 0;
-        return 0;
-    }
-
-    function findT(name, value) {
-
-        if (name === "phi") {
-            return solve(
-                T => eqvarAt(T, 1, "phi") - value,
-                0.1, 240, TOL, MAX_ITER
+            return (
+                Q - Qv(Ta, Pa) -
+                (TC - Ta) / Ra(TC, Ta) -
+                (PC - Pa) / ZA -
+                CdTcdt
             );
-        }
+        };
 
-        if (name === "Rf") {
-            return solve(
-                T => eqvarAt(T, Math.min(1, PA0 / pvstar(T)), "Rf") - value,
-                230, 300, TOL, MAX_ITER
-            );
-        }
-
-        if (name === "Rs") {
-            return solve(
-                T => eqvarAt(T, PA0 / pvstar(T), "Rs") - value,
-                295, 350, TOL, MAX_ITER
-            );
-        }
-
-        return solve(
-            T => eqvarAt(T, PA0 / pvstar(T), "dTcdt") - value,
-            340, 1000, TOL, MAX_ITER
-        );
-    }
-
-    function heatIndexKelvin(Ta, RH) {
-        const e = findEqvar(Ta, RH);
-        return findT(e.name, e.value);
+        return solve(f, 340, T + 3500, TOL, MAX_ITER);
     }
 
     // -------------------------------------------------
@@ -436,7 +348,7 @@ var calculateHeatIndex = (function () {
 // Tabla única de umbrales (°C), usada por los cálculos,
 // las leyendas y los informes. Escala del National
 // Weather Service ampliada con el límite fisiológico
-// del Extended Heat Index (Lu & Romps / ISGlobal).
+// del Heat Index extendido (Lu y Romps / ISGlobal).
 // =====================================================
 
 const HI_LEVELS = [

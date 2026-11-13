@@ -600,7 +600,7 @@ html += `</div>`;
 
         <p class="mt-3 text-sm text-slate-600">
 
-        El Heat Index combina la temperatura y la humedad relativa para evaluar el estrés térmico fisiológico real. Los cálculos se basan en el modelo termodinámico estricto de Lu & Romps (2022).
+        El Heat Index combina la temperatura y la humedad relativa para evaluar el estrés térmico fisiológico real. Los cálculos se basan en el modelo fisiológico de Lu y Romps (paquete oficial heatindex).
 
         </p>
 
